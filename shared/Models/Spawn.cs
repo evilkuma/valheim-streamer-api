@@ -73,6 +73,22 @@ namespace Shared.Models
             [JsonProperty("name")]
             public string name { get; set; }
         }
+
+        public class ActionSkeletonArmyData
+        {
+            [JsonProperty("playerName")]
+            public string playerName { get; set; }
+        }
+
+        public class RpcActionSkeletonArmyData
+        {
+            [JsonProperty("prefabName")]
+            public string prefabName { get; set; }
+            [JsonProperty("amount")]
+            public int amount { get; set; }
+            [JsonProperty("level")]
+            public int level { get; set; }
+        }
         
         public class RpcRequestData
         {

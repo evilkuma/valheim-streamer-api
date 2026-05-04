@@ -17,6 +17,7 @@ namespace ValheimStreamerApi.Client
             RegisterAction<object>("golden-rain", GoldenRain);
             RegisterAction<SpawnData.RpcActionChestData>("chest", Chest);
             RegisterAction<SpawnData.RpcActionInvisibleEnemyData>("invisible-enemy", InvisibleEnemy);
+            RegisterAction<SpawnData.RpcActionSkeletonArmyData>("skeleton-army", SkeletonArmy);
         }
 
         private object Spawn(SpawnData.RpcRequestData data)
@@ -147,6 +148,31 @@ namespace ValheimStreamerApi.Client
 
             go.GetComponent<Character>()?.SetLevel(2);
             go.AddComponent<InvisibleEnemyBehaviour>();
+
+            return new { status = "ok" };
+        }
+
+        private object SkeletonArmy(SpawnData.RpcActionSkeletonArmyData data)
+        {
+            GameObject prefab = ZNetScene.instance.GetPrefab(data.prefabName);
+            if (!prefab) return new { status = $"Prefab not found: {data.prefabName}" };
+
+            Player player = Player.m_localPlayer;
+            Vector3 center = player.transform.position;
+            const float radius = 4f;
+
+            for (int i = 0; i < data.amount; i++)
+            {
+                float angle = 2 * Mathf.PI * i / data.amount;
+                Vector3 position = new Vector3(
+                    center.x + radius * Mathf.Cos(angle),
+                    center.y,
+                    center.z + radius * Mathf.Sin(angle)
+                );
+
+                GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
+                go.GetComponent<Character>()?.SetLevel(data.level);
+            }
 
             return new { status = "ok" };
         }

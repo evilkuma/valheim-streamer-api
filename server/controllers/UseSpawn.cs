@@ -17,6 +17,7 @@ namespace ValheimStreamerApi.Server
             RegisterAction<SpawnData.ActionGoldenRainData>("golden-rain", ActionGoldenRain);
             RegisterAction<SpawnData.ActionStarterKitData>("starter-kit", ActionStarterKit);
             RegisterAction<SpawnData.ActionInvisibleEnemyData>("invisible-enemy", ActionInvisibleEnemy);
+            RegisterAction<SpawnData.ActionSkeletonArmyData>("skeleton-army", ActionSkeletonArmy);
         }
 
         protected override async Task<object> Action(SpawnData.ActionMainData data)
@@ -212,6 +213,45 @@ namespace ValheimStreamerApi.Server
                 {
                     action = "invisible-enemy",
                     data = new SpawnData.RpcActionInvisibleEnemyData{ name = prefabName }
+                }
+            ).Task;
+            return JsonParser.Parse<SpawnData.RpcResponseData>(zData);
+        }
+
+        private async Task<object> ActionSkeletonArmy(SpawnData.ActionSkeletonArmyData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            // prefab, level, minAmount, maxAmount — растёт с каждым убитым боссом
+            var tiers = new[]
+            {
+                (prefab: "Skeleton",        level: 1, min: 5, max: 6),
+                (prefab: "Skeleton",        level: 2, min: 5, max: 7),
+                (prefab: "Skeleton_Poison", level: 2, min: 6, max: 8),
+                (prefab: "Skeleton_Poison", level: 3, min: 7, max: 9),
+                (prefab: "Skeleton_Poison", level: 3, min: 8, max: 10),
+            };
+
+            int tier = 0;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+
+            var t = tiers[tier];
+            int amount = UnityEngine.Random.Range(t.min, t.max + 1);
+
+            var zData = await RpcManager.SendMessageAsync(SpawnData.rpc, targetPeer.m_uid,
+                new RpcRequestData<SpawnData.RpcActionSkeletonArmyData>
+                {
+                    action = "skeleton-army",
+                    data = new SpawnData.RpcActionSkeletonArmyData
+                    {
+                        prefabName = t.prefab,
+                        amount     = amount,
+                        level      = t.level,
+                    }
                 }
             ).Task;
             return JsonParser.Parse<SpawnData.RpcResponseData>(zData);
