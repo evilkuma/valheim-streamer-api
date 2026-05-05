@@ -89,6 +89,20 @@ namespace Shared.Models
             [JsonProperty("level")]
             public int level { get; set; }
         }
+
+        public class ActionFollowerData
+        {
+            [JsonProperty("playerName")]
+            public string playerName { get; set; }
+        }
+
+        public class RpcActionFollowerData
+        {
+            [JsonProperty("prefabName")]
+            public string prefabName { get; set; }
+            [JsonProperty("level")]
+            public int level { get; set; }
+        }
         
         public class RpcRequestData
         {

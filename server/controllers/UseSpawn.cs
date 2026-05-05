@@ -18,6 +18,7 @@ namespace ValheimStreamerApi.Server
             RegisterAction<SpawnData.ActionStarterKitData>("starter-kit", ActionStarterKit);
             RegisterAction<SpawnData.ActionInvisibleEnemyData>("invisible-enemy", ActionInvisibleEnemy);
             RegisterAction<SpawnData.ActionSkeletonArmyData>("skeleton-army", ActionSkeletonArmy);
+            RegisterAction<SpawnData.ActionFollowerData>("follower", ActionFollower);
         }
 
         protected override async Task<object> Action(SpawnData.ActionMainData data)
@@ -252,6 +253,39 @@ namespace ValheimStreamerApi.Server
                         amount     = amount,
                         level      = t.level,
                     }
+                }
+            ).Task;
+            return JsonParser.Parse<SpawnData.RpcResponseData>(zData);
+        }
+
+        private async Task<object> ActionFollower(SpawnData.ActionFollowerData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            // Draugr → Draugr_Elite с ростом прогресса — выглядят как воины-викинги
+            var tiers = new[]
+            {
+                (prefab: "Draugr",       level: 1),
+                (prefab: "Draugr",       level: 2),
+                (prefab: "Draugr_Elite", level: 2),
+                (prefab: "Draugr_Elite", level: 3),
+                (prefab: "Draugr_Elite", level: 3),
+            };
+
+            int tier = 0;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+
+            var t = tiers[tier];
+
+            var zData = await RpcManager.SendMessageAsync(SpawnData.rpc, targetPeer.m_uid,
+                new RpcRequestData<SpawnData.RpcActionFollowerData>
+                {
+                    action = "follower",
+                    data   = new SpawnData.RpcActionFollowerData { prefabName = t.prefab, level = t.level }
                 }
             ).Task;
             return JsonParser.Parse<SpawnData.RpcResponseData>(zData);

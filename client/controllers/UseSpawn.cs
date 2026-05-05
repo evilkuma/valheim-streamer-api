@@ -18,6 +18,7 @@ namespace ValheimStreamerApi.Client
             RegisterAction<SpawnData.RpcActionChestData>("chest", Chest);
             RegisterAction<SpawnData.RpcActionInvisibleEnemyData>("invisible-enemy", InvisibleEnemy);
             RegisterAction<SpawnData.RpcActionSkeletonArmyData>("skeleton-army", SkeletonArmy);
+            RegisterAction<SpawnData.RpcActionFollowerData>("follower", Follower);
         }
 
         private object Spawn(SpawnData.RpcRequestData data)
@@ -173,6 +174,23 @@ namespace ValheimStreamerApi.Client
                 GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
                 go.GetComponent<Character>()?.SetLevel(data.level);
             }
+
+            return new { status = "ok" };
+        }
+
+        private object Follower(SpawnData.RpcActionFollowerData data)
+        {
+            GameObject prefab = ZNetScene.instance.GetPrefab(data.prefabName);
+            if (!prefab) return new { status = $"Prefab not found: {data.prefabName}" };
+
+            Player player = Player.m_localPlayer;
+            Vector3 position = player.transform.position + player.transform.forward * 3f;
+
+            GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
+            go.GetComponent<Character>()?.SetLevel(data.level);
+
+            var behaviour = go.AddComponent<FriendlyNpcBehaviour>();
+            behaviour.Init("Ульф", player.GetPlayerName());
 
             return new { status = "ok" };
         }
