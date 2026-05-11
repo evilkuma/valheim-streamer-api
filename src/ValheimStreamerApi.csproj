@@ -1,35 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <AssemblyName>ValheimStreamerApi.Client</AssemblyName>
+    <AssemblyName>ValheimStreamerApi</AssemblyName>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
-    <OutputPath>..\Build\Client\</OutputPath>
+    <OutputPath>..\Build\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\shared\shared.csproj" />
-  </ItemGroup>
-  
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-		<Reference Include="0Harmony">
-			<HintPath>$(VALHEIM_INSTALL)\BepInEx\core\0Harmony.dll</HintPath>
-		</Reference>
-		<Reference Include="assembly_utils">
-		  <HintPath>$(VALHEIM_INSTALL)\valheim_server_Data\Managed\assembly_utils.dll</HintPath>
-		</Reference>
-		<Reference Include="BepInEx">
-			<HintPath>$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.dll</HintPath>
-		</Reference>
-		<Reference Include="BepInEx.Harmony">
-			<HintPath>$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.Harmony.dll</HintPath>
-		</Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(VALHEIM_INSTALL)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BepInEx.Harmony">
+      <HintPath>$(VALHEIM_INSTALL)\BepInEx\core\BepInEx.Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="assembly_valheim">
       <HintPath>$(VALHEIM_INSTALL)\valheim_server_Data\Managed\assembly_valheim.dll</HintPath>
       <Private>False</Private>
@@ -46,13 +42,13 @@
       <HintPath>$(VALHEIM_INSTALL)\valheim_server_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-		<Reference Include="UnityEngine.PhysicsModule">
-			<HintPath>$(VALHEIM_INSTALL)\valheim_server_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<!-- <Reference Include="Jotunn">
-			<HintPath>$(VALHEIM_INSTALL)\BepInEx\plugins\Jotunn.dll</HintPath>
-			<Private>False</Private>
-		</Reference> -->
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(VALHEIM_INSTALL)\valheim_server_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Splatform">
+      <HintPath>$(VALHEIM_INSTALL)\valheim_server_Data\Managed\Splatform.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 
-namespace ValheimStreamerApi.Client
+namespace ValheimStreamerApi
 {
     [DefaultExecutionOrder(9999)]
     public class InvisibleEnemyBehaviour : MonoBehaviour

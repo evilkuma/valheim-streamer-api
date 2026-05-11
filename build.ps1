@@ -1,99 +1,48 @@
-﻿# build.ps1
+# build.ps1
 param(
-    [string]$ValheimPath = "C:\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server",
-    [string]$OutputDir = ".\Build",
-    [string]$OutputDirServer = "C:\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server\BepInEx\plugins\valheim-streamer-api",
-    [string]$OutputDirClient = "C:\Program Files (x86)\Steam\steamapps\common\Valheim\BepInEx\plugins\valheim-streamer-api"
+    [string]$ValheimPath   = "C:\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server",
+    [string]$OutputDir     = ".\Build",
+    [string]$DeployServer  = "C:\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server\BepInEx\plugins\valheim-streamer-api",
+    [string]$DeployClient  = "C:\Program Files (x86)\Steam\steamapps\common\Valheim\BepInEx\plugins\valheim-streamer-api"
 )
 
-Write-Host "=== Сборка Valheim Streamer API Mods ===" -ForegroundColor Green
+Write-Host "=== Building Valheim Streamer API ===" -ForegroundColor Green
 
-# Устанавливаем переменную окружения для сборки
 $env:VALHEIM_INSTALL = $ValheimPath
 
-# Создаем выходную директорию если её нет
 if (!(Test-Path $OutputDir)) {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 }
 
-if (!(Test-Path $OutputDirServer)) {
-    New-Item -ItemType Directory -Path $OutputDirServer -Force | Out-Null
-}
-
-if (!(Test-Path $OutputDirClient)) {
-    New-Item -ItemType Directory -Path $OutputDirClient -Force | Out-Null
-}
-
-# Функция для форматирования размера файла
-function Format-FileSize {
-    param([long]$bytes)
-    if ($bytes -gt 1MB) {
-        return "{0:N2} MB" -f ($bytes / 1MB)
-    }
-    elseif ($bytes -gt 1KB) {
-        return "{0:N2} KB" -f ($bytes / 1KB)
-    }
-    else {
-        return "{0} B" -f $bytes
-    }
-}
-
-# Сборка серверного мода
-Write-Host "`nСборка серверного мода..." -ForegroundColor Yellow
-Push-Location .\server
+Push-Location .\src
 dotnet clean
 dotnet build -c Release
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Ошибка сборки серверного мода!" -ForegroundColor Red
+    Write-Host "Build failed!" -ForegroundColor Red
     Pop-Location
     exit 1
 }
 Pop-Location
 
-# Сборка клиентского мода
-Write-Host "`nСборка клиентского мода..." -ForegroundColor Yellow
-Push-Location .\client
-dotnet clean
-dotnet build -c Release
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Ошибка сборки клиентского мода!" -ForegroundColor Red
-    Pop-Location
-    exit 1
-}
-Pop-Location
+Write-Host "`n=== Build complete! ===" -ForegroundColor Green
+Write-Host "Output: $OutputDir" -ForegroundColor Cyan
 
-Write-Host "`n=== Сборка завершена успешно! ===" -ForegroundColor Green
-Write-Host "Файлы находятся в: $OutputDir" -ForegroundColor Cyan
-
-# Показываем список собранных файлов
-Write-Host "`nСобранные файлы:" -ForegroundColor Yellow
+Write-Host "`nBuilt files:" -ForegroundColor Yellow
 Get-ChildItem $OutputDir -Filter "*.dll" | ForEach-Object {
-    $size = Format-FileSize -bytes $_.Length
+    $size = if ($_.Length -gt 1MB) { "{0:N2} MB" -f ($_.Length / 1MB) }
+            elseif ($_.Length -gt 1KB) { "{0:N2} KB" -f ($_.Length / 1KB) }
+            else { "{0} B" -f $_.Length }
     Write-Host "  - $($_.Name) ($size)" -ForegroundColor White
 }
 
-# Копируем файлы если они не в выходной директории
-$serverDll = ".\server\bin\Release\net48\ValheimStreamerApi.Server.dll"
-$clientDll = ".\client\bin\Release\net48\ValheimStreamerApi.Client.dll"
+$dll     = "$OutputDir\ValheimStreamerApi.dll"
+$jsonDll = "$OutputDir\Newtonsoft.Json.dll"
 
-if (Test-Path $serverDll) {
-    Copy-Item $serverDll $OutputDir -Force
-    Write-Host "`nСерверный мод скопирован: $OutputDir\ValheimStreamerApi.Server.dll" -ForegroundColor Green
+if (Test-Path $dll) {
+    foreach ($dir in @($DeployServer, $DeployClient)) {
+        if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Copy-Item $dll $dir -Force
+        if (Test-Path $jsonDll) { Copy-Item $jsonDll $dir -Force }
+        Write-Host "Deployed to: $dir" -ForegroundColor Green
+    }
 }
-
-if (Test-Path $clientDll) {
-    Copy-Item $clientDll $OutputDir -Force
-    Write-Host "Клиентский мод скопирован: $OutputDir\ValheimStreamerApi.Client.dll" -ForegroundColor Green
-}
-
-Copy-Item "$OutputDir\Client\ValheimStreamerApi.Client.dll" $OutputDirClient -Force
-Copy-Item "$OutputDir\Client\ValheimStreamerApi.Shared.dll" $OutputDirClient -Force
-Copy-Item "$OutputDir\Client\Newtonsoft.Json.dll" $OutputDirClient -Force
-
-Copy-Item "$OutputDir\Server\ValheimStreamerApi.Server.dll" $OutputDirServer -Force
-Copy-Item "$OutputDir\Server\ValheimStreamerApi.Shared.dll" $OutputDirServer -Force
-Copy-Item "$OutputDir\Server\Newtonsoft.Json.dll" $OutputDirServer -Force
-
-Write-Host "`nДля установки:" -ForegroundColor Yellow
-Write-Host "  Сервер: Скопируйте ValheimStreamerApi.Server.dll в BepInEx/plugins/ на сервере" -ForegroundColor White
-Write-Host "  Клиент: Скопируйте ValheimStreamerApi.Client.dll в BepInEx/plugins/ каждому игроку" -ForegroundColor White

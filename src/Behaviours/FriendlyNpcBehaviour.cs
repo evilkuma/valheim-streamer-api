@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ValheimStreamerApi.Client
+namespace ValheimStreamerApi
 {
     [DefaultExecutionOrder(9999)]
     public class FriendlyNpcBehaviour : MonoBehaviour

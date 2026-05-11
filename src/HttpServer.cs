@@ -1,13 +1,10 @@
 using System;
-using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Shared;
 
-namespace ValheimStreamerApi.Server
+namespace ValheimStreamerApi
 {
     public class HttpEventArgs : EventArgs
     {
@@ -25,29 +22,15 @@ namespace ValheimStreamerApi.Server
 
     public class HttpServer : IDisposable
     {
-        private static readonly EventManager Events = new ();
+        private readonly EventManager Events;
 
         private HttpListener listener;
         private Thread serverThread;
         private bool isRunning;
 
-        public HttpServer(int port)
+        public HttpServer(int port, EventManager events)
         {
-            var controllerType = typeof(HttpController);
-            var controllers = Assembly.GetExecutingAssembly().GetTypes()
-                .Where(t => !t.IsAbstract && controllerType.IsAssignableFrom(t));
-
-            foreach (var type in controllers)
-            {
-                var controller = (HttpController)Activator.CreateInstance(type);
-                if (string.IsNullOrEmpty(controller.http))
-                {
-                    Log.LogError($"Controller {type.Name} has no http route, skipping");
-                    continue;
-                }
-                Events.Add(controller.http, controller.Handle);
-                Log.LogInfo($"Registered controller: {type.Name} -> {controller.http}");
-            }
+            Events = events;
 
             listener = new HttpListener();
             listener.Prefixes.Add($"http://*:{port}/");
@@ -68,7 +51,7 @@ namespace ValheimStreamerApi.Server
                 isRunning = true;
                 serverThread = new Thread(async () => await HandleRequests());
                 serverThread.Start();
-                
+
                 Log.LogInfo("HTTP сервер запущен");
             }
             catch (Exception ex)
@@ -100,7 +83,6 @@ namespace ValheimStreamerApi.Server
 
             try
             {
-                // CORS заголовки
                 response.Headers.Add("Access-Control-Allow-Origin", "*");
                 response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
                 response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
@@ -124,6 +106,12 @@ namespace ValheimStreamerApi.Server
                     response.StatusCode = 404;
                     await WriteJsonResponse(response, new { error = "Endpoint not found" });
                 }
+            }
+            catch (TimeoutException ex)
+            {
+                Log.LogError($"Таймаут RPC: {ex.Message}");
+                response.StatusCode = 504;
+                await WriteJsonResponse(response, new { error = ex.Message });
             }
             catch (Exception ex)
             {

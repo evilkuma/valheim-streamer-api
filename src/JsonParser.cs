@@ -1,9 +1,8 @@
-
 using System.IO;
 using System.Net;
 using Newtonsoft.Json;
 
-namespace Shared
+namespace ValheimStreamerApi
 {
     public static class JsonParser
     {
@@ -15,11 +14,9 @@ namespace Shared
                 requestBody = reader.ReadToEnd();
             }
 
-            var data = JsonConvert.DeserializeObject<TResult>(requestBody);
-
-            return data;
+            return JsonConvert.DeserializeObject<TResult>(requestBody);
         }
-        
+
         public static TResult Parse<TResult>(string value)
         {
             return JsonConvert.DeserializeObject<TResult>(value);
@@ -28,9 +25,7 @@ namespace Shared
         public static TResult Parse<TResult>(ZPackage pkg)
         {
             string jsonData = pkg.ReadString();
-            var data = JsonConvert.DeserializeObject<TResult>(jsonData);
-
-            return data;
+            return JsonConvert.DeserializeObject<TResult>(jsonData);
         }
 
         public static string Serialize(object data)

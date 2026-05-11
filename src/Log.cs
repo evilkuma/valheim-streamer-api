@@ -1,7 +1,6 @@
-
 using BepInEx.Logging;
 
-namespace Shared
+namespace ValheimStreamerApi
 {
     public static class Log
     {
