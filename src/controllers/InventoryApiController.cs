@@ -6,18 +6,8 @@ using UnityEngine;
 
 namespace ValheimStreamerApi
 {
-    public class InventoryApiController : ApiController<InventoryApiController.ActionMainData>
+    public class InventoryApiController : ApiController<PlayerActionData>
     {
-        public class ActionMainData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionDisarmamentData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
         private class Item
         {
             [JsonProperty("name")]        public string name        { get; set; }
@@ -44,7 +34,7 @@ namespace ValheimStreamerApi
             http = "/api/inventory";
             rpc  = "ValheimStreamerApi/api/inventory";
 
-            RegisterHttpAction<ActionDisarmamentData>("disarmament", ActionDisarmament);
+            RegisterHttpAction<PlayerActionData>("disarmament", ActionDisarmament);
 
             RegisterRpcAction<object>("get-inventory", GetInventory);
             RegisterRpcAction<object>("disarmament", Disarmament);
@@ -52,7 +42,7 @@ namespace ValheimStreamerApi
 
         // === Server (HTTP) ===
 
-        protected override async Task<object> Action(ActionMainData data)
+        protected override async Task<object> Action(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -61,7 +51,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionDisarmament(ActionDisarmamentData data)
+        private async Task<object> ActionDisarmament(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };

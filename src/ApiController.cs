@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace ValheimStreamerApi
 {
@@ -80,6 +81,11 @@ namespace ValheimStreamerApi
 
             return events;
         }
+    }
+
+    public class PlayerActionData
+    {
+        [JsonProperty("playerName")] public string playerName { get; set; }
     }
 
     public abstract class ApiController<THttpData> : ApiController

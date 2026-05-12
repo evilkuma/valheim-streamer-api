@@ -17,41 +17,6 @@ namespace ValheimStreamerApi
             [JsonProperty("pickup")]     public bool   pickup     { get; set; }
         }
 
-        private class ActionWoodenPrisonData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionStonePrisonData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionGoldenRainData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionStarterKitData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionInvisibleEnemyData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionSkeletonArmyData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
-        private class ActionFollowerData
-        {
-            [JsonProperty("playerName")] public string playerName { get; set; }
-        }
-
         private class ChestItemData
         {
             [JsonProperty("name")]   public string name   { get; set; }
@@ -100,13 +65,13 @@ namespace ValheimStreamerApi
             http = "/api/spawn";
             rpc  = "ValheimStreamerApi/api/spawn";
 
-            RegisterHttpAction<ActionWoodenPrisonData>("wooden-prison",  ActionWoodenPrison);
-            RegisterHttpAction<ActionStonePrisonData>("stone-prison",    ActionStonePrison);
-            RegisterHttpAction<ActionGoldenRainData>("golden-rain",      ActionGoldenRain);
-            RegisterHttpAction<ActionStarterKitData>("starter-kit",      ActionStarterKit);
-            RegisterHttpAction<ActionInvisibleEnemyData>("invisible-enemy", ActionInvisibleEnemy);
-            RegisterHttpAction<ActionSkeletonArmyData>("skeleton-army",  ActionSkeletonArmy);
-            RegisterHttpAction<ActionFollowerData>("follower",           ActionFollower);
+            RegisterHttpAction<PlayerActionData>("wooden-prison",    ActionWoodenPrison);
+            RegisterHttpAction<PlayerActionData>("stone-prison",     ActionStonePrison);
+            RegisterHttpAction<PlayerActionData>("golden-rain",      ActionGoldenRain);
+            RegisterHttpAction<PlayerActionData>("starter-kit",      ActionStarterKit);
+            RegisterHttpAction<PlayerActionData>("invisible-enemy",  ActionInvisibleEnemy);
+            RegisterHttpAction<PlayerActionData>("skeleton-army",    ActionSkeletonArmy);
+            RegisterHttpAction<PlayerActionData>("follower",         ActionFollower);
 
             RegisterRpcAction<RpcActionData>("main",                     Spawn);
             RegisterRpcAction<object>("wooden-prison",                   WoodenPrison);
@@ -137,7 +102,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionWoodenPrison(ActionWoodenPrisonData data)
+        private async Task<object> ActionWoodenPrison(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -146,7 +111,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionStonePrison(ActionStonePrisonData data)
+        private async Task<object> ActionStonePrison(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -155,7 +120,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionGoldenRain(ActionGoldenRainData data)
+        private async Task<object> ActionGoldenRain(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -164,7 +129,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionStarterKit(ActionStarterKitData data)
+        private async Task<object> ActionStarterKit(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -249,7 +214,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionInvisibleEnemy(ActionInvisibleEnemyData data)
+        private async Task<object> ActionInvisibleEnemy(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -278,7 +243,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionSkeletonArmy(ActionSkeletonArmyData data)
+        private async Task<object> ActionSkeletonArmy(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
@@ -307,7 +272,7 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
-        private async Task<object> ActionFollower(ActionFollowerData data)
+        private async Task<object> ActionFollower(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
