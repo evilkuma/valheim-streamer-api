@@ -17,11 +17,6 @@ namespace ValheimStreamerApi
         private static readonly Dictionary<string, TaskCompletionSource<ZPackage>> _tasks = new();
         private static readonly Dictionary<string, Action<ZPackage>> _events = new();
 
-        public static void Initialize()
-        {
-            Harmony.CreateAndPatchAll(typeof(RPCRegistration));
-        }
-
         public static void AddListener(string name, Action<ZPackage> func)
         {
             _events[name] = func;

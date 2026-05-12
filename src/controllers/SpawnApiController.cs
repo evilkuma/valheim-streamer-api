@@ -295,7 +295,7 @@ namespace ValheimStreamerApi
             var t = tiers[tier];
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "follower",
-                new RpcActionFollowerData { prefabName = t.prefab, level = t.level }
+                new RpcActionFollowerData { prefabName = "StreamerApi.Follower", level = t.level }
             );
             return JsonParser.Parse<RpcResponseData>(zData);
         }
@@ -453,10 +453,6 @@ namespace ValheimStreamerApi
             Vector3 position = player.transform.position + player.transform.forward * 3f;
 
             GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
-            go.GetComponent<Character>()?.SetLevel(data.level);
-
-            var behaviour = go.AddComponent<FriendlyNpcBehaviour>();
-            behaviour.Init("Ульф", player.GetPlayerName());
 
             return new { status = "ok" };
         }

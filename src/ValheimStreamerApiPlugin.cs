@@ -1,5 +1,7 @@
+using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
+using HarmonyLib;
 
 namespace ValheimStreamerApi
 {
@@ -16,7 +18,7 @@ namespace ValheimStreamerApi
             Instance = this;
             Log.Initialize(base.Logger);
             _port = Config.Bind("Server", "Port", 8080, "HTTP порт. Требует перезапуска.");
-            RpcManager.Initialize();
+            Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly());
         }
 
         // Вызывается из Game.Start Postfix — ZNet.m_isServer уже доступен
