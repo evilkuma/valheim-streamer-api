@@ -70,7 +70,9 @@ namespace ValheimStreamerApi.Patches
             }
 
             clone.AddComponent<MonsterAI>();
-            clone.AddComponent<Tameable>();
+            clone.AddComponent<FollowerTameable>();
+            // TODO: содержимое инвентаря не сохраняется в отличии от VisEquipment
+            clone.AddComponent<Container>();
             clone.AddComponent<CharacterDrop>();
             clone.AddComponent<FollowerBehaviour>();
 
@@ -119,4 +121,42 @@ namespace ValheimStreamerApi.Patches
             return count;
         }
     }
+
+    [HarmonyPatch(typeof(Character), "OnDeath")]
+    internal static class FollowerDeathPatch
+    {
+        [HarmonyPrefix]
+        private static void Prefix(Character __instance)
+        {
+            var follower = __instance.GetComponent<FollowerBehaviour>();
+            if (follower == null) return;
+            follower.OnFollowerDeath();
+        }
+    }
+
+    [HarmonyPatch(typeof(MonsterAI), "SetTarget")]
+    internal static class FollowerSetTargetPatch
+    {
+        [HarmonyPrefix]
+        private static bool Prefix(MonsterAI __instance, Character attacker)
+        {
+            var follower = __instance.GetComponent<FollowerBehaviour>();
+            if (follower == null) return true;
+            return follower.IsValidTarget(attacker);
+        }
+    }
+
+    [HarmonyPatch(typeof(Tameable), nameof(Tameable.GetHoverText))]
+    internal static class FollowerHoverTextPatch
+    {
+        [HarmonyPostfix]
+        private static void Postfix(Tameable __instance, ref string __result)
+        {
+            if (__instance.GetComponent<FollowerBehaviour>() == null) return;
+            __result = __result
+                .Replace("Переименовать", "Открыть инвентарь")
+                .Replace("Rename", "Open inventory");
+        }
+    }
+
 }
