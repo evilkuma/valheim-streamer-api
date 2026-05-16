@@ -71,8 +71,15 @@ namespace ValheimStreamerApi.Patches
 
             clone.AddComponent<MonsterAI>();
             clone.AddComponent<FollowerTameable>();
-            // TODO: содержимое инвентаря не сохраняется в отличии от VisEquipment
-            clone.AddComponent<Container>();
+
+            // Размер задаётся на prefab-объекте до спауна, чтобы Container.Awake() создал
+            // Inventory нужного размера (иначе он создаётся с дефолтом 3×2 = 6 слотов).
+            var container = clone.AddComponent<Container>();
+            container.m_name            = "Ульф";
+            container.m_width           = 8;
+            container.m_height          = 4;
+            container.m_checkGuardStone = false;
+
             clone.AddComponent<CharacterDrop>();
             clone.AddComponent<FollowerBehaviour>();
 

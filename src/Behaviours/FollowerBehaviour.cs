@@ -17,8 +17,8 @@ namespace ValheimStreamerApi
         private const float MaxChaseDistance = 15f;
         private const float ThreatScanRange  = 20f;
 
-        private static readonly FieldInfo ContainerInventoryField =
-            typeof(Container).GetField("m_inventory",
+        private static readonly FieldInfo HumanoidInventoryField =
+            typeof(Humanoid).GetField("m_inventory",
                 BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
 
         private static readonly FieldInfo[] EquipSlotFields = GetEquipSlotFields();
@@ -115,13 +115,7 @@ namespace ValheimStreamerApi
             _container = GetComponent<Container>();
 
             if (_container != null && _humanoid != null)
-            {
-                _container.m_name            = "Ульф";
-                _container.m_width           = 4;
-                _container.m_height          = 2;
-                _container.m_checkGuardStone = false;
                 StartCoroutine(ShareInventoryCoroutine());
-            }
 
             StartCoroutine(AiControlCoroutine());
             StartCoroutine(HealCoroutine());
@@ -302,15 +296,17 @@ namespace ValheimStreamerApi
 
         private IEnumerator ShareInventoryCoroutine()
         {
+            // Wait for Container.Start() to load inventory from ZDO before we touch it
             yield return null;
 
-            if (ContainerInventoryField == null)
+            if (HumanoidInventoryField == null)
             {
-                Debug.LogError("[ValheimStreamerApi] Container.m_inventory field not found — inventory sharing skipped");
+                Log.LogError("[ValheimStreamerApi] Humanoid.m_inventory field not found — inventory sharing skipped");
                 yield break;
             }
 
-            ContainerInventoryField.SetValue(_container, _humanoid.GetInventory());
+            // Point Humanoid at Container's inventory so Container's ZDO save/load stays intact
+            HumanoidInventoryField.SetValue(_humanoid, _container.GetInventory());
             StartCoroutine(AutoEquipCoroutine());
         }
 
