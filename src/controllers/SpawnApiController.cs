@@ -60,6 +60,12 @@ namespace ValheimStreamerApi
             [JsonProperty("level")]      public int    level      { get; set; }
         }
 
+        private class RpcActionBerserkerSquadData
+        {
+            [JsonProperty("prefabName")] public string prefabName { get; set; }
+            [JsonProperty("level")]      public int    level      { get; set; }
+        }
+
         public SpawnApiController()
         {
             http = "/api/spawn";
@@ -72,6 +78,7 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("invisible-enemy",  ActionInvisibleEnemy);
             RegisterHttpAction<PlayerActionData>("skeleton-army",    ActionSkeletonArmy);
             RegisterHttpAction<PlayerActionData>("follower",         ActionFollower);
+            RegisterHttpAction<PlayerActionData>("berserker-squad", ActionBerserkerSquad);
 
             RegisterRpcAction<RpcActionData>("main",                     Spawn);
             RegisterRpcAction<object>("wooden-prison",                   WoodenPrison);
@@ -81,6 +88,7 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcActionInvisibleEnemyData>("invisible-enemy", InvisibleEnemy);
             RegisterRpcAction<RpcActionSkeletonArmyData>("skeleton-army", SkeletonArmy);
             RegisterRpcAction<RpcActionFollowerData>("follower",         Follower);
+            RegisterRpcAction<RpcActionBerserkerSquadData>("berserker-squad", BerserkerSquad);
         }
 
         // === Server (HTTP) ===
@@ -300,6 +308,36 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
+        private async Task<object> ActionBerserkerSquad(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var tiers = new[]
+            {
+                (prefab: "Greyling",         level: 1),
+                (prefab: "Greydwarf",        level: 2),
+                (prefab: "Greydwarf_Elite",  level: 2),
+                (prefab: "Greydwarf_Elite",  level: 3),
+                (prefab: "Fuling",           level: 2),
+                (prefab: "FulingBerserker",  level: 3),
+            };
+
+            int tier = 0;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))   tier = 1;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))     tier = 2;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass"))   tier = 3;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))     tier = 4;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_goblinking")) tier = 5;
+
+            var t = tiers[tier];
+
+            var squadData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "berserker-squad",
+                new RpcActionBerserkerSquadData { prefabName = t.prefab, level = t.level }
+            );
+            return JsonParser.Parse<RpcResponseData>(squadData);
+        }
+
         // === Client (RPC) ===
 
         private object Spawn(RpcActionData data)
@@ -453,6 +491,37 @@ namespace ValheimStreamerApi
             Vector3 position = player.transform.position + player.transform.forward * 3f;
 
             GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
+
+            return new { status = "ok" };
+        }
+
+        private object BerserkerSquad(RpcActionBerserkerSquadData data)
+        {
+            GameObject prefab = ZNetScene.instance.GetPrefab(data.prefabName);
+            if (!prefab) return new { status = $"Prefab not found: {data.prefabName}" };
+
+            Player player = Player.m_localPlayer;
+            const int count = 3;
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = 2f * Mathf.PI * i / count;
+                float distance = Random.Range(8f, 12f);
+                Vector3 position = new Vector3(
+                    player.transform.position.x + distance * Mathf.Cos(angle),
+                    player.transform.position.y,
+                    player.transform.position.z + distance * Mathf.Sin(angle)
+                );
+
+                GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
+                go.GetComponent<Character>()?.SetLevel(data.level);
+                go.GetComponent<BaseAI>()?.Alert();
+                MonsterAI monsterAI = go.GetComponent<MonsterAI>();
+                if (monsterAI != null)
+                    typeof(MonsterAI)
+                        .GetField("m_targetCreature", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                        ?.SetValue(monsterAI, player);
+            }
 
             return new { status = "ok" };
         }
