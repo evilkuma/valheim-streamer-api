@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -45,6 +46,7 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcDangerPointData>("biome-danger-point", DangerPoint);
             RegisterHttpAction<PlayerActionData>("to-home", ActionToHome);
             RegisterRpcAction<object>("to-home", ToHome);
+            RegisterHttpAction<PlayerActionData>("random-biome", ActionRandomBiome);
         }
 
         // === Server (HTTP) ===
@@ -89,6 +91,32 @@ namespace ValheimStreamerApi
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "to-home", new {});
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private async Task<object> ActionRandomBiome(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var byBiome = new Dictionary<string, List<Vector3>>();
+            foreach (var entry in ZoneSystem.instance.m_locationInstances)
+            {
+                string biome = entry.Value.m_location.m_biome.ToString();
+                if (!byBiome.ContainsKey(biome)) byBiome[biome] = new List<Vector3>();
+                byBiome[biome].Add(entry.Value.m_position);
+            }
+
+            if (byBiome.Count == 0) return new { error = "no locations found" };
+
+            var biomes = new List<string>(byBiome.Keys);
+            string selectedBiome = biomes[Random.Range(0, biomes.Count)];
+            List<Vector3> locations = byBiome[selectedBiome];
+            Vector3 target = locations[Random.Range(0, locations.Count)];
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "teleport-to",
+                new ActionTeleportToData { x = target.x, y = target.y, z = target.z }
+            );
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
