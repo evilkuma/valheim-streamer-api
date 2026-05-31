@@ -43,6 +43,8 @@ namespace ValheimStreamerApi
             RegisterRpcAction<ActionTeleportToData>("teleport-to", TeleportTo);
             RegisterHttpAction<PlayerActionData>("biome-danger-point", ActionBiomeDangerPoint);
             RegisterRpcAction<RpcDangerPointData>("biome-danger-point", DangerPoint);
+            RegisterHttpAction<PlayerActionData>("to-home", ActionToHome);
+            RegisterRpcAction<object>("to-home", ToHome);
         }
 
         // === Server (HTTP) ===
@@ -82,6 +84,14 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
+        private async Task<object> ActionToHome(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "to-home", new {});
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
         private async Task<object> ActionBiomeDangerPoint(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
@@ -116,6 +126,19 @@ namespace ValheimStreamerApi
                 false
             );
 
+            return new { status = "ok" };
+        }
+
+        private object ToHome(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            var profile = Game.instance.GetPlayerProfile();
+            if (!profile.HaveCustomSpawnPoint()) return new { status = "no spawn point set" };
+            var spawnPoint = profile.GetCustomSpawnPoint();
+
+            player.TeleportTo(spawnPoint, player.transform.rotation, false);
             return new { status = "ok" };
         }
 
