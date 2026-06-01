@@ -66,6 +66,18 @@ namespace ValheimStreamerApi
             [JsonProperty("level")]      public int    level      { get; set; }
         }
 
+        private class RpcActionTornadoData
+        {
+            [JsonProperty("items")] public List<ChestItemData> items { get; set; }
+        }
+
+        private struct TornadoPoolItem
+        {
+            public string name;
+            public int    amount;
+            public TornadoPoolItem(string name, int amount) { this.name = name; this.amount = amount; }
+        }
+
         public SpawnApiController()
         {
             http = "/api/spawn";
@@ -78,7 +90,8 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("invisible-enemy",  ActionInvisibleEnemy);
             RegisterHttpAction<PlayerActionData>("skeleton-army",    ActionSkeletonArmy);
             RegisterHttpAction<PlayerActionData>("follower",         ActionFollower);
-            RegisterHttpAction<PlayerActionData>("berserker-squad", ActionBerserkerSquad);
+            RegisterHttpAction<PlayerActionData>("berserker-squad",   ActionBerserkerSquad);
+            RegisterHttpAction<PlayerActionData>("tornado-resources", ActionTornadoResources);
 
             RegisterRpcAction<RpcActionData>("main",                     Spawn);
             RegisterRpcAction<object>("wooden-prison",                   WoodenPrison);
@@ -89,6 +102,7 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcActionSkeletonArmyData>("skeleton-army", SkeletonArmy);
             RegisterRpcAction<RpcActionFollowerData>("follower",         Follower);
             RegisterRpcAction<RpcActionBerserkerSquadData>("berserker-squad", BerserkerSquad);
+            RegisterRpcAction<RpcActionTornadoData>("tornado-resources",       TornadoResources);
         }
 
         // === Server (HTTP) ===
@@ -338,6 +352,100 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(squadData);
         }
 
+        private async Task<object> ActionTornadoResources(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var pools = new TornadoPoolItem[][]
+            {
+                // Тир 0: до Эйктюра
+                new[] {
+                    new TornadoPoolItem("Coins", 200),      new TornadoPoolItem("Amber", 10),
+                    new TornadoPoolItem("Ruby", 4),          new TornadoPoolItem("Honey", 25),
+                    new TornadoPoolItem("Mushroom", 30),     new TornadoPoolItem("Feathers", 50),
+                    new TornadoPoolItem("BoneFragments", 30),new TornadoPoolItem("TrophyBoar", 5),
+                    new TornadoPoolItem("SpearFlint", 1),    new TornadoPoolItem("AxeFlint", 1),
+                    new TornadoPoolItem("ShieldWood", 1),    new TornadoPoolItem("HelmetLeather", 1),
+                },
+                // Тир 1: после Эйктюра
+                new[] {
+                    new TornadoPoolItem("Coins", 300),       new TornadoPoolItem("Ruby", 8),
+                    new TornadoPoolItem("AmberPearl", 6),    new TornadoPoolItem("CopperOre", 60),
+                    new TornadoPoolItem("FineWood", 40),     new TornadoPoolItem("HardAntler", 4),
+                    new TornadoPoolItem("TrophyEikthyr", 1), new TornadoPoolItem("Resin", 40),
+                    new TornadoPoolItem("SwordBronze", 1),   new TornadoPoolItem("AtgeirBronze", 1),
+                    new TornadoPoolItem("ShieldBronzeBuckler", 1), new TornadoPoolItem("ArmorBronzeChest", 1),
+                },
+                // Тир 2: после Старейшины
+                new[] {
+                    new TornadoPoolItem("Coins", 400),       new TornadoPoolItem("Ruby", 12),
+                    new TornadoPoolItem("Amber", 20),        new TornadoPoolItem("IronScrap", 60),
+                    new TornadoPoolItem("ElderBark", 50),    new TornadoPoolItem("WitheredBone", 12),
+                    new TornadoPoolItem("AncientSeed", 4),   new TornadoPoolItem("Guck", 15),
+                    new TornadoPoolItem("SwordIron", 2),     new TornadoPoolItem("AtgeirIron", 2),
+                    new TornadoPoolItem("ShieldIronSquare", 2), new TornadoPoolItem("ArmorIronChest", 2),
+                },
+                // Тир 3: после Бонемасса
+                new[] {
+                    new TornadoPoolItem("Coins", 500),       new TornadoPoolItem("Ruby", 15),
+                    new TornadoPoolItem("AmberPearl", 12),   new TornadoPoolItem("SilverOre", 50),
+                    new TornadoPoolItem("WolfPelt", 20),     new TornadoPoolItem("WolfFang", 12),
+                    new TornadoPoolItem("FreezeGland", 8),   new TornadoPoolItem("TrophyBonemass", 1),
+                    new TornadoPoolItem("SwordSilver", 2),   new TornadoPoolItem("MaceSilver", 2),
+                    new TornadoPoolItem("ArmorWolfChest", 2),new TornadoPoolItem("CapeLox", 2),
+                },
+                // Тир 4: после Модер
+                new[] {
+                    new TornadoPoolItem("Coins", 600),          new TornadoPoolItem("Ruby", 20),
+                    new TornadoPoolItem("AmberPearl", 15),      new TornadoPoolItem("BlackMetalScrap", 50),
+                    new TornadoPoolItem("LinenThread", 30),     new TornadoPoolItem("Flax", 50),
+                    new TornadoPoolItem("DragonTear", 4),       new TornadoPoolItem("TrophyDragonQueen", 1),
+                    new TornadoPoolItem("SwordBlackmetal", 3),  new TornadoPoolItem("AtgeirBlackmetal", 3),
+                    new TornadoPoolItem("ArmorWolfChest", 3), new TornadoPoolItem("ShieldBlackmetalTower", 3),
+                },
+                // Тир 5: после Ягглюта
+                new[] {
+                    new TornadoPoolItem("Coins", 800),          new TornadoPoolItem("Ruby", 25),
+                    new TornadoPoolItem("AmberPearl", 20),      new TornadoPoolItem("BlackMetalScrap", 70),
+                    new TornadoPoolItem("LinenThread", 50),     new TornadoPoolItem("YmirRemains", 5),
+                    new TornadoPoolItem("TrophyGoblinKing", 1), new TornadoPoolItem("JuteRed", 15),
+                    new TornadoPoolItem("SwordMistwalker", 3),       new TornadoPoolItem("StaffFireball", 3),
+                    new TornadoPoolItem("HelmetCarapace", 3),new TornadoPoolItem("ShieldCarapace", 3),
+                },
+            };
+
+            int tier = 0;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))   tier = 1;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))     tier = 2;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass"))   tier = 3;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))     tier = 4;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_goblinking")) tier = 5;
+
+            int pickCount = Random.Range(6, 9);
+            List<ChestItemData> selected = ShuffleAndPick(pools[tier], pickCount);
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "resource-tornado",
+                new RpcActionTornadoData { items = selected }
+            );
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private static List<ChestItemData> ShuffleAndPick(TornadoPoolItem[] pool, int pickCount)
+        {
+            var arr = (TornadoPoolItem[])pool.Clone();
+            for (int i = arr.Length - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                TornadoPoolItem tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+            }
+            var result = new List<ChestItemData>();
+            int count = Mathf.Min(pickCount, arr.Length);
+            for (int k = 0; k < count; k++)
+                result.Add(new ChestItemData { name = arr[k].name, amount = arr[k].amount });
+            return result;
+        }
+
         // === Client (RPC) ===
 
         private object Spawn(RpcActionData data)
@@ -524,6 +632,132 @@ namespace ValheimStreamerApi
             }
 
             return new { status = "ok" };
+        }
+
+        private object TornadoResources(RpcActionTornadoData data)
+        {
+            Player.m_localPlayer.StartCoroutine(TornadoRoutine(data.items));
+            return new { status = "ok" };
+        }
+
+        private static IEnumerator TornadoRoutine(List<ChestItemData> items)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) yield break;
+
+            // Собираем задания: stackable дробим на стаки по smallStackSize
+            const int smallStackSize = 15;
+            var jobs = new List<(GameObject prefab, int stack, int quality)>();
+            foreach (var item in items)
+            {
+                GameObject prefab = ZNetScene.instance.GetPrefab(item.name);
+                if (!prefab) continue;
+                ItemDrop itemDrop = prefab.GetComponent<ItemDrop>();
+                if (itemDrop == null) continue;
+
+                if (itemDrop.m_itemData.IsEquipable())
+                {
+                    jobs.Add((prefab, 1, item.amount));
+                }
+                else
+                {
+                    int stackSize = Mathf.Min(smallStackSize, Mathf.Max(1, itemDrop.m_itemData.m_shared.m_maxStackSize));
+                    int remaining = item.amount;
+                    while (remaining > 0)
+                    {
+                        int thisStack = Mathf.Min(stackSize, remaining);
+                        jobs.Add((prefab, thisStack, 1));
+                        remaining -= thisStack;
+                    }
+                }
+            }
+
+            int total = jobs.Count;
+            if (total == 0) yield break;
+
+            const float spawnInterval  = 0.025f;
+            const float orbitRadius    = 3.5f;
+            const float helixTurns     = 3f;    // оборотов вдоль высоты спирали
+            const float initialSpread  = 4f;    // начальная высота вихря (м)
+            const float angularSpeed   = 3f * Mathf.PI; // ~1.5 об/сек
+            const float riseSpeed      = 1.8f;
+            const float orbitDuration  = 4f;
+
+            // Фаза 1: спавн по спирали — каждый предмет своя высота и угол
+            var spawned = new List<(GameObject go, Rigidbody rb, float phase, float hOffset)>(total);
+            for (int i = 0; i < total; i++)
+            {
+                player = Player.m_localPlayer;
+                if (player == null) yield break;
+
+                var (prefab, stack, quality) = jobs[i];
+
+                // Угол и высота по спирали — создаёт 3D вихрь
+                float t      = (float)i / total;
+                float phase  = 2f * Mathf.PI * helixTurns * t;
+                float hOffset = initialSpread * t;
+
+                Vector3 pos = player.transform.position + new Vector3(
+                    orbitRadius * Mathf.Cos(phase), hOffset, orbitRadius * Mathf.Sin(phase)
+                );
+
+                GameObject go = GameObject.Instantiate(prefab, pos, Quaternion.identity);
+
+                ItemDrop drop = go.GetComponent<ItemDrop>();
+                if (drop != null)
+                {
+                    drop.m_itemData.m_stack = stack;
+                    if (quality > 1)
+                    {
+                        drop.m_itemData.m_quality    = quality;
+                        drop.m_itemData.m_durability = drop.m_itemData.GetMaxDurability();
+                    }
+                }
+
+                Rigidbody rb = go.GetComponent<Rigidbody>();
+                if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
+
+                spawned.Add((go, rb, phase, hOffset));
+                yield return new WaitForSeconds(spawnInterval);
+            }
+
+            // Фаза 2: вихрь поднимается — каждый предмет сохраняет свой вертикальный слой
+            float elapsed = 0f;
+            while (elapsed < orbitDuration)
+            {
+                player = Player.m_localPlayer;
+                if (player == null) break;
+
+                float angle = elapsed * angularSpeed;
+
+                foreach (var entry in spawned)
+                {
+                    if (entry.go == null) continue;
+                    float phi    = angle + entry.phase;
+                    float height = entry.hOffset + elapsed * riseSpeed;
+                    entry.go.transform.position = player.transform.position + new Vector3(
+                        orbitRadius * Mathf.Cos(phi), height, orbitRadius * Mathf.Sin(phi)
+                    );
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            // Фаза 3: выброс — каждый предмет летит по своей траектории
+            float finalAngle = elapsed * angularSpeed;
+            foreach (var entry in spawned)
+            {
+                if (entry.go == null || entry.rb == null) continue;
+
+                entry.rb.isKinematic = false;
+                entry.rb.useGravity  = true;
+
+                float phi    = finalAngle + entry.phase;
+                Vector3 rad  = new Vector3(Mathf.Cos(phi), 0f, Mathf.Sin(phi));
+                Vector3 tang = new Vector3(-Mathf.Sin(phi), 0f, Mathf.Cos(phi));
+                entry.rb.linearVelocity = rad * 8f + tang * 4f + Vector3.up * 3f;
+            }
         }
 
         private static IEnumerator CoinRainRoutine()
