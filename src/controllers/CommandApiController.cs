@@ -23,6 +23,7 @@ namespace ValheimStreamerApi
             rpc  = "ValheimStreamerApi/api/command";
 
             RegisterRpcAction<object>("undress", Undress);
+            RegisterHttpAction<PlayerActionData>("set-day", ActionSetDay);
         }
 
         // === Server (HTTP) ===
@@ -34,6 +35,14 @@ namespace ValheimStreamerApi
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, data.command, new {});
             return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private async Task<object> ActionSetDay(PlayerActionData _data)
+        {
+            double dayLength  = EnvMan.instance.m_dayLengthSec;
+            long   currentDay = (long)(ZNet.instance.GetTimeSeconds() / dayLength);
+            ZNet.instance.SetNetTime((currentDay + 0.25) * dayLength);
+            return new { status = "ok" };
         }
 
         // === Client (RPC) ===

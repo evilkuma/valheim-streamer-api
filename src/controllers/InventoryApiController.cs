@@ -34,10 +34,12 @@ namespace ValheimStreamerApi
             http = "/api/inventory";
             rpc  = "ValheimStreamerApi/api/inventory";
 
-            RegisterHttpAction<PlayerActionData>("disarmament", ActionDisarmament);
+            RegisterHttpAction<PlayerActionData>("disarmament",       ActionDisarmament);
+            RegisterHttpAction<PlayerActionData>("scatter-inventory", ActionScatterInventory);
 
-            RegisterRpcAction<object>("get-inventory", GetInventory);
-            RegisterRpcAction<object>("disarmament", Disarmament);
+            RegisterRpcAction<object>("get-inventory",     GetInventory);
+            RegisterRpcAction<object>("disarmament",       Disarmament);
+            RegisterRpcAction<object>("scatter-inventory", ScatterInventory);
         }
 
         // === Server (HTTP) ===
@@ -57,6 +59,15 @@ namespace ValheimStreamerApi
             if (targetPeer == null) return new { error = "no player peer" };
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "disarmament", new {});
+            return JsonParser.Parse<RpcStatusData>(zData);
+        }
+
+        private async Task<object> ActionScatterInventory(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "scatter-inventory", new {});
             return JsonParser.Parse<RpcStatusData>(zData);
         }
 
@@ -118,6 +129,55 @@ namespace ValheimStreamerApi
                 player.UnequipItem(item, triggerEquipEffects: false);
 
                 float angle = 2 * Mathf.PI * i / weapons.Count;
+                Vector3 position = new Vector3(
+                    center.x + radius * Mathf.Cos(angle),
+                    center.y + 1f,
+                    center.z + radius * Mathf.Sin(angle)
+                );
+
+                if (item.m_dropPrefab != null)
+                {
+                    GameObject go = GameObject.Instantiate(item.m_dropPrefab, position, Quaternion.identity);
+                    ItemDrop drop = go.GetComponent<ItemDrop>();
+                    if (drop != null)
+                    {
+                        drop.m_itemData = item.Clone();
+
+                        Rigidbody rb = go.GetComponent<Rigidbody>();
+                        if (rb != null)
+                        {
+                            Vector3 outward = (position - center).normalized;
+                            rb.linearVelocity = outward * 4f + Vector3.up * 3f;
+                        }
+                    }
+                }
+
+                inventory.RemoveItem(item);
+            }
+
+            return new { status = "ok" };
+        }
+
+        private object ScatterInventory(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            Inventory inventory = player.GetInventory();
+
+            var unequipped = inventory.GetAllItems()
+                .Where(item => !item.m_equipped)
+                .ToList();
+
+            if (unequipped.Count == 0)
+                return new { status = "nothing to scatter" };
+
+            Vector3 center = player.transform.position;
+            float radius = 3f;
+
+            for (int i = 0; i < unequipped.Count; i++)
+            {
+                var item = unequipped[i];
+
+                float angle = 2 * Mathf.PI * i / unequipped.Count;
                 Vector3 position = new Vector3(
                     center.x + radius * Mathf.Cos(angle),
                     center.y + 1f,
