@@ -95,12 +95,12 @@ namespace ValheimStreamerApi.Patches
                 return;
             }
             
-            namedPrefabs[clone.name.GetStableHashCode()] = clone;
+            namedPrefabs[clone.name.GetStableHashCode(true)] = clone;
             __instance.m_prefabs.Add(clone);
-            
+
             Log.LogInfo($"[ValheimStreamerApi] Follower зарегистрирован на основе Player.");
         }
-        
+
         private static int CopyFields(Component source, Component destination)
         {
             const BindingFlags flags =

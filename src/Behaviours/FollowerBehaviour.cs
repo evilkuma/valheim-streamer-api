@@ -99,8 +99,8 @@ namespace ValheimStreamerApi
             if (vis != null)
             {
                 vis.SetModel(0);                                        // мужская модель
-                vis.SetBeardItem("Beard3");                             // длинная борода с косами
-                vis.SetHairItem("Hair1");                               // короткие волосы
+                vis.SetBeardItem("Beard3".GetStableHashCode(true));                             // длинная борода с косами
+                vis.SetHairItem("Hair1".GetStableHashCode(true));                               // короткие волосы
                 vis.SetHairColor(new Vector3(0.85f, 0.82f, 0.75f));    // седые волосы
                 vis.SetSkinColor(new Vector3(0.90f, 0.68f, 0.46f));    // загорелая обветренная кожа
             }

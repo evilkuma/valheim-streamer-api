@@ -425,7 +425,7 @@ namespace ValheimStreamerApi
             int pickCount = Random.Range(6, 9);
             List<ChestItemData> selected = ShuffleAndPick(pools[tier], pickCount);
 
-            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "resource-tornado",
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "tornado-resources",
                 new RpcActionTornadoData { items = selected }
             );
             return JsonParser.Parse<RpcResponseData>(zData);
