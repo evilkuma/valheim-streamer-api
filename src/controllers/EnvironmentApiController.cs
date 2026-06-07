@@ -20,6 +20,8 @@ namespace ValheimStreamerApi
 
             RegisterHttpAction<PlayerActionData>("polar-night",  ActionPolarNight);
             RegisterRpcAction<object>("polar-night",             PolarNight);
+
+            RegisterHttpAction<PlayerActionData>("sunny-day", ActionSunnyDay);
         }
 
         // === Server (HTTP) ===
@@ -31,6 +33,24 @@ namespace ValheimStreamerApi
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "fog-of-war", new {});
             return JsonParser.Parse<object>(zData);
+        }
+
+        private async Task<object> ActionPolarNight(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "polar-night", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
+        private async Task<object> ActionSunnyDay(PlayerActionData _data)
+        {
+            double dayLength  = EnvMan.instance.m_dayLengthSec;
+            long   currentDay = (long)(ZNet.instance.GetTimeSeconds() / dayLength);
+            ZNet.instance.SetNetTime((currentDay + 0.25) * dayLength);
+            EnvMan.instance.m_debugEnv = "";
+            return new { status = "ok" };
         }
 
         // === Client (RPC) ===
@@ -84,17 +104,6 @@ namespace ValheimStreamerApi
             EnvMan.instance.m_debugEnv = FogEnvName;
             yield return new WaitForSeconds(60f);
             EnvMan.instance.m_debugEnv = "";
-        }
-
-        // === Polar Night ===
-
-        private async Task<object> ActionPolarNight(PlayerActionData data)
-        {
-            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
-            if (targetPeer == null) return new { error = "no player peer" };
-
-            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "polar-night", new {});
-            return JsonParser.Parse<object>(zData);
         }
 
         private object PolarNight(object _data)
