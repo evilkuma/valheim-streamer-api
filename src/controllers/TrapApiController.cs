@@ -24,6 +24,9 @@ namespace ValheimStreamerApi
 
             RegisterHttpAction<PlayerActionData>("thunderstorm",    ActionThunderstorm);
             RegisterRpcAction<object>("thunderstorm",               Thunderstorm);
+
+            RegisterHttpAction<PlayerActionData>("freeze",          ActionFreeze);
+            RegisterRpcAction<object>("freeze",                     Freeze);
         }
 
         // === Server (HTTP) ===
@@ -44,6 +47,15 @@ namespace ValheimStreamerApi
             if (targetPeer == null) return new { error = "no player peer" };
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "thunderstorm", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
+        private async Task<object> ActionFreeze(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "freeze", new {});
             return JsonParser.Parse<object>(zData);
         }
 
@@ -85,6 +97,29 @@ namespace ValheimStreamerApi
             }
 
             EnvMan.instance.m_debugEnv = "";
+        }
+
+        private object Freeze(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            player.StartCoroutine(FreezeRoutine(player));
+            return new { status = "ok" };
+        }
+
+        private static IEnumerator FreezeRoutine(Player player)
+        {
+            EnvMan.instance.m_debugEnv = "SnowStorm";
+
+            StatusEffect se = ObjectDB.instance.GetStatusEffect("Freezing".GetStableHashCode(true));
+            if (se != null)
+                player.GetSEMan().AddStatusEffect(se);
+
+            yield return new WaitForSeconds(90f);
+
+            EnvMan.instance.m_debugEnv = "";
+            player.GetSEMan().RemoveStatusEffect("Freezing".GetStableHashCode(true));
         }
 
         private object MeteorShower(RpcMeteorShowerData data)

@@ -27,6 +27,8 @@ namespace ValheimStreamerApi
             rpc  = "ValheimStreamerApi/api/debug";
 
             RegisterRpcAction<RpcRequestMainData>("terminal-message", TerminalMessage);
+            RegisterHttpAction<PlayerActionData>("log-environments",   ActionLogEnvironments);
+            RegisterHttpAction<PlayerActionData>("log-status-effects", ActionLogStatusEffects);
         }
 
         // === Server (HTTP) ===
@@ -41,6 +43,22 @@ namespace ValheimStreamerApi
                 new RpcRequestMainData { message = data.message }
             );
             return JsonParser.Parse<RpcResponseMainData>(zData);
+        }
+
+        private Task<object> ActionLogEnvironments(PlayerActionData _data)
+        {
+            var names = EnvMan.instance.m_environments.ConvertAll(e => e.m_name);
+            foreach (var name in names)
+                Log.LogInfo($"[ENV] {name}");
+            return Task.FromResult<object>(new { environments = names });
+        }
+
+        private Task<object> ActionLogStatusEffects(PlayerActionData _data)
+        {
+            var names = ObjectDB.instance.m_StatusEffects.ConvertAll(se => se.name);
+            foreach (var name in names)
+                Log.LogInfo($"[SE] {name}");
+            return Task.FromResult<object>(new { statusEffects = names });
         }
 
         // === Client (RPC) ===
