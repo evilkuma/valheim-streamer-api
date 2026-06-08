@@ -19,8 +19,11 @@ namespace ValheimStreamerApi
             http = "/api/trap";
             rpc  = "ValheimStreamerApi/api/trap";
 
-            RegisterHttpAction<PlayerActionData>("meteor-shower", ActionMeteorShower);
+            RegisterHttpAction<PlayerActionData>("meteor-shower",   ActionMeteorShower);
             RegisterRpcAction<RpcMeteorShowerData>("meteor-shower", MeteorShower);
+
+            RegisterHttpAction<PlayerActionData>("thunderstorm",    ActionThunderstorm);
+            RegisterRpcAction<object>("thunderstorm",               Thunderstorm);
         }
 
         // === Server (HTTP) ===
@@ -35,7 +38,54 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<object>(zData);
         }
 
+        private async Task<object> ActionThunderstorm(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "thunderstorm", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
         // === Client (RPC) ===
+
+        private object Thunderstorm(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            player.StartCoroutine(ThunderstormRoutine(player));
+            return new { status = "ok" };
+        }
+
+        private static IEnumerator ThunderstormRoutine(Player player)
+        {
+            GameObject lightningPrefab = ZNetScene.instance.GetPrefab("lightningAOE");
+            if (!lightningPrefab) yield break;
+
+            EnvMan.instance.m_debugEnv = "ThunderStorm";
+            yield return new WaitForSeconds(15f);
+
+            const int   strikes      = 7;
+            const float radius       = 6f;
+            const float minInterval  = 2.5f;
+            const float maxInterval  = 5.0f;
+
+            for (int i = 0; i < strikes; i++)
+            {
+                if (player == null) break;
+
+                float angle = Random.Range(0f, 2f * Mathf.PI);
+                float r     = Random.Range(1f, radius);
+                Vector3 pos = player.transform.position + new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+
+                Object.Instantiate(lightningPrefab, pos, Quaternion.identity);
+
+                yield return new WaitForSeconds(Random.Range(minInterval, maxInterval));
+            }
+
+            EnvMan.instance.m_debugEnv = "";
+        }
 
         private object MeteorShower(RpcMeteorShowerData data)
         {
