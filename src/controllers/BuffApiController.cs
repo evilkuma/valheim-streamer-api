@@ -15,6 +15,9 @@ namespace ValheimStreamerApi
 
             RegisterHttpAction<PlayerActionData>("weakness-curse", ActionWeaknessCurse);
             RegisterRpcAction<object>("weakness-curse",            WeaknessCurse);
+
+            RegisterHttpAction<PlayerActionData>("invisibility",   ActionInvisibility);
+            RegisterRpcAction<object>("invisibility",              Invisibility);
         }
 
         // === Server (HTTP) ===
@@ -72,6 +75,40 @@ namespace ValheimStreamerApi
             player.GetSEMan().AddStatusEffect(se);
             return new { status = "ok" };
         }
+
+        private async Task<object> ActionInvisibility(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "invisibility", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
+        private object Invisibility(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            var se    = ScriptableObject.CreateInstance<InvisibilitySE>();
+            se.name   = "ValheimStreamerApi_Invisibility";
+            se.m_name = "Невидимость";
+            se.m_ttl  = 30f;
+
+            var smoked = ObjectDB.instance.GetStatusEffect("Smoked".GetStableHashCode(true));
+            if (smoked != null) se.m_icon = smoked.m_icon;
+
+            player.GetSEMan().AddStatusEffect(se);
+            return new { status = "ok" };
+        }
+    }
+
+    public class InvisibilitySE : StatusEffect
+    {
+        public override void ModifyNoise(float baseNoise, ref float noise)   => noise   = 0f;
+        public override void ModifyStealth(float baseStealth, ref float stealth) => stealth = 0f;
+
+        public override string GetIconText() => $"{Mathf.CeilToInt(m_ttl - m_time)}s";
     }
 
     public class WeaknessCurseSE : StatusEffect
