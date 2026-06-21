@@ -10,8 +10,11 @@ namespace ValheimStreamerApi
             http = "/api/buff";
             rpc  = "ValheimStreamerApi/api/buff";
 
-            RegisterHttpAction<PlayerActionData>("berserker", ActionBerserker);
-            RegisterRpcAction<object>("berserker",            Berserker);
+            RegisterHttpAction<PlayerActionData>("berserker",       ActionBerserker);
+            RegisterRpcAction<object>("berserker",                Berserker);
+
+            RegisterHttpAction<PlayerActionData>("weakness-curse", ActionWeaknessCurse);
+            RegisterRpcAction<object>("weakness-curse",            WeaknessCurse);
         }
 
         // === Server (HTTP) ===
@@ -22,6 +25,15 @@ namespace ValheimStreamerApi
             if (targetPeer == null) return new { error = "no player peer" };
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "berserker", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
+        private async Task<object> ActionWeaknessCurse(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "weakness-curse", new {});
             return JsonParser.Parse<object>(zData);
         }
 
@@ -42,6 +54,36 @@ namespace ValheimStreamerApi
 
             player.GetSEMan().AddStatusEffect(se);
             return new { status = "ok" };
+        }
+        
+        private object WeaknessCurse(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            var se    = ScriptableObject.CreateInstance<WeaknessCurseSE>();
+            se.name   = "ValheimStreamerApi_WeaknessCurse";
+            se.m_name = "Проклятие слабости";
+            se.m_ttl  = 45f;
+
+            var poison = ObjectDB.instance.GetStatusEffect("Poison".GetStableHashCode(true));
+            if (poison != null) se.m_icon = poison.m_icon;
+
+            player.GetSEMan().AddStatusEffect(se);
+            return new { status = "ok" };
+        }
+    }
+
+    public class WeaknessCurseSE : StatusEffect
+    {
+        public override void ModifyAttack(Skills.SkillType skill, ref HitData hitData)
+        {
+            hitData.m_damage.Modify(0.25f);
+        }
+
+        public override string GetIconText()
+        {
+            return $"{Mathf.CeilToInt(m_ttl - m_time)}s";
         }
     }
 
