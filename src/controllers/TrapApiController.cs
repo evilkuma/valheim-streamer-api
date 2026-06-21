@@ -27,6 +27,9 @@ namespace ValheimStreamerApi
 
             RegisterHttpAction<PlayerActionData>("freeze",          ActionFreeze);
             RegisterRpcAction<object>("freeze",                     Freeze);
+
+            RegisterHttpAction<PlayerActionData>("noise-curse",       ActionNoiseCurse);
+            RegisterRpcAction<object>("noise-curse",                 NoiseCurse);
         }
 
         // === Server (HTTP) ===
@@ -59,7 +62,48 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<object>(zData);
         }
 
+        private async Task<object> ActionNoiseCurse(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "noise-curse", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
         // === Client (RPC) ===
+
+        private object NoiseCurse(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            Vector3 playerPos = player.transform.position;
+            const float radius = 100f;
+            var targetField = typeof(MonsterAI).GetField("m_targetCreature", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            int alerted = 0;
+
+            foreach (var character in Character.GetAllCharacters())
+            {
+                if (character is Player) continue;
+                if (character.m_faction == Character.Faction.Players) continue;
+
+                BaseAI ai = character.GetComponent<BaseAI>();
+                if (ai == null) continue;
+
+                if (Vector3.Distance(character.transform.position, playerPos) > radius) continue;
+
+                ai.Alert();
+
+                MonsterAI monsterAI = character.GetComponent<MonsterAI>();
+                if (monsterAI != null)
+                    targetField?.SetValue(monsterAI, player);
+
+                alerted++;
+            }
+
+            return new { status = "ok", alerted };
+        }
 
         private object Thunderstorm(object _data)
         {
