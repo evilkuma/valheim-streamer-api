@@ -16,7 +16,7 @@ namespace ValheimStreamerApi.Patches
             {
                 if (_prefabParent == null)
                 {
-                    _prefabParent = new GameObject("CompanionMod_Prefabs");
+                    _prefabParent = new GameObject("Custom_Prefabs");
                     UnityEngine.Object.DontDestroyOnLoad(_prefabParent);
                     _prefabParent.SetActive(false);
                 }
@@ -28,6 +28,7 @@ namespace ValheimStreamerApi.Patches
         private static void Postfix(ZNetScene __instance)
         {
             PatchFollower(__instance);
+            PatchDragonCompanion(__instance);
         }
 
         private static void PatchFollower(ZNetScene __instance)
@@ -99,6 +100,39 @@ namespace ValheimStreamerApi.Patches
             __instance.m_prefabs.Add(clone);
 
             Log.LogInfo($"[ValheimStreamerApi] Follower зарегистрирован на основе Player.");
+        }
+
+        private static void PatchDragonCompanion(ZNetScene __instance)
+        {
+            var sourcePrefab = __instance.GetPrefab("Hatchling");
+            if (sourcePrefab == null)
+            {
+                Log.LogError($"[ValheimStreamerApi] Источник Hatchling не найден — DragonCompanion не зарегистрирован.");
+                return;
+            }
+
+            var clone = UnityEngine.Object.Instantiate(sourcePrefab, PrefabParent.transform);
+            clone.name = "StreamerApi.DragonCompanion";
+
+            clone.AddComponent<Tameable>();
+            clone.AddComponent<DragonCompanionBehaviour>();
+
+            var namedPrefabs = AccessTools.Field(typeof(ZNetScene), "m_namedPrefabs")
+                ?.GetValue(__instance) as Dictionary<int, GameObject>;
+            if (namedPrefabs == null)
+            {
+                Log.LogError(
+                    "[ValheimStreamerApi] Не удалось получить m_namedPrefabs — регистрация прервана.");
+                return;
+            }
+
+            var zviewDragon = clone.GetComponent<ZNetView>();
+            if (zviewDragon != null) AccessTools.Field(typeof(ZNetView), "m_persistent")?.SetValue(zviewDragon, true);
+
+            namedPrefabs[clone.name.GetStableHashCode(true)] = clone;
+            __instance.m_prefabs.Add(clone);
+
+            Log.LogInfo($"[ValheimStreamerApi] DragonCompanion зарегистрирован на основе Hatchling.");
         }
 
         private static int CopyFields(Component source, Component destination)

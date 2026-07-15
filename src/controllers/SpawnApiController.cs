@@ -89,7 +89,8 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("starter-kit",      ActionStarterKit);
             RegisterHttpAction<PlayerActionData>("invisible-enemy",  ActionInvisibleEnemy);
             RegisterHttpAction<PlayerActionData>("skeleton-army",    ActionSkeletonArmy);
-            RegisterHttpAction<PlayerActionData>("follower",         ActionFollower);
+            RegisterHttpAction<PlayerActionData>("follower",          ActionFollower);
+            RegisterHttpAction<PlayerActionData>("dragon-companion",  ActionDragonCompanion);
             RegisterHttpAction<PlayerActionData>("berserker-squad",   ActionBerserkerSquad);
             RegisterHttpAction<PlayerActionData>("tornado-resources", ActionTornadoResources);
 
@@ -100,7 +101,8 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcActionChestData>("chest",               Chest);
             RegisterRpcAction<RpcActionInvisibleEnemyData>("invisible-enemy", InvisibleEnemy);
             RegisterRpcAction<RpcActionSkeletonArmyData>("skeleton-army", SkeletonArmy);
-            RegisterRpcAction<RpcActionFollowerData>("follower",         Follower);
+            RegisterRpcAction<RpcActionFollowerData>("follower",          Follower);
+            RegisterRpcAction<object>("dragon-companion",               DragonCompanion);
             RegisterRpcAction<RpcActionBerserkerSquadData>("berserker-squad", BerserkerSquad);
             RegisterRpcAction<RpcActionTornadoData>("tornado-resources",       TornadoResources);
         }
@@ -319,6 +321,15 @@ namespace ValheimStreamerApi
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "follower",
                 new RpcActionFollowerData { prefabName = "StreamerApi.Follower", level = t.level }
             );
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private async Task<object> ActionDragonCompanion(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "dragon-companion", new {});
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
@@ -592,13 +603,28 @@ namespace ValheimStreamerApi
 
         private object Follower(RpcActionFollowerData data)
         {
-            GameObject prefab = ZNetScene.instance.GetPrefab(data.prefabName);
-            if (!prefab) return new { status = $"Prefab not found: {data.prefabName}" };
+            GameObject prefab = ZNetScene.instance.GetPrefab("StreamerApi.Follower");
+            if (!prefab) return new { status = $"Prefab not found: StreamerApi.Follower" };
 
             Player player = Player.m_localPlayer;
             Vector3 position = player.transform.position + player.transform.forward * 3f;
 
             GameObject go = GameObject.Instantiate(prefab, position, Quaternion.identity);
+
+            return new { status = "ok" };
+        }
+
+        private object DragonCompanion(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            GameObject prefab = ZNetScene.instance.GetPrefab("StreamerApi.DragonCompanion");
+            if (!prefab) return new { status = "Prefab not found: StreamerApi.DragonCompanion" };
+
+            Vector3 pos = player.transform.position + player.transform.forward * 5f;
+            GameObject go = GameObject.Instantiate(prefab, pos, Quaternion.identity);
+            go.GetComponent<DragonCompanionBehaviour>()?.Init(player);
 
             return new { status = "ok" };
         }
