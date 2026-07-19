@@ -66,6 +66,11 @@ namespace ValheimStreamerApi
             [JsonProperty("level")]      public int    level      { get; set; }
         }
 
+        private class RpcActionBoarHerdData
+        {
+            [JsonProperty("level")] public int level { get; set; }
+        }
+
         private class RpcActionTornadoData
         {
             [JsonProperty("items")] public List<ChestItemData> items { get; set; }
@@ -91,6 +96,7 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("skeleton-army",    ActionSkeletonArmy);
             RegisterHttpAction<PlayerActionData>("follower",          ActionFollower);
             RegisterHttpAction<PlayerActionData>("dragon-companion",  ActionDragonCompanion);
+            RegisterHttpAction<PlayerActionData>("boar-herd",         ActionBoarHerd);
             RegisterHttpAction<PlayerActionData>("berserker-squad",   ActionBerserkerSquad);
             RegisterHttpAction<PlayerActionData>("tornado-resources", ActionTornadoResources);
 
@@ -103,6 +109,7 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcActionSkeletonArmyData>("skeleton-army", SkeletonArmy);
             RegisterRpcAction<RpcActionFollowerData>("follower",          Follower);
             RegisterRpcAction<object>("dragon-companion",               DragonCompanion);
+            RegisterRpcAction<RpcActionBoarHerdData>("boar-herd",      BoarHerd);
             RegisterRpcAction<RpcActionBerserkerSquadData>("berserker-squad", BerserkerSquad);
             RegisterRpcAction<RpcActionTornadoData>("tornado-resources",       TornadoResources);
         }
@@ -330,6 +337,24 @@ namespace ValheimStreamerApi
             if (targetPeer == null) return new { error = "no player peer" };
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "dragon-companion", new {});
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private async Task<object> ActionBoarHerd(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            int tier = 0;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+
+            int[] levels = { 1, 1, 2, 2, 3 };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "boar-herd",
+                new RpcActionBoarHerdData { level = levels[tier] });
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
@@ -627,6 +652,36 @@ namespace ValheimStreamerApi
             go.GetComponent<DragonCompanionBehaviour>()?.Init(player);
 
             return new { status = "ok" };
+        }
+
+        private object BoarHerd(RpcActionBoarHerdData data)
+        {
+            GameObject prefab = ZNetScene.instance.GetPrefab("Boar");
+            if (!prefab) return new { status = "Prefab not found: Boar" };
+
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            const int   count = 15;
+            var targetField = typeof(MonsterAI).GetField("m_targetCreature",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle    = 2f * Mathf.PI * i / count;
+                float distance = Random.Range(6f, 12f);
+                Vector3 pos    = player.transform.position
+                               + new Vector3(Mathf.Cos(angle) * distance, 0f, Mathf.Sin(angle) * distance);
+
+                GameObject go = GameObject.Instantiate(prefab, pos, Quaternion.identity);
+                go.GetComponent<Character>()?.SetLevel(data.level);
+                go.GetComponent<BaseAI>()?.Alert();
+                MonsterAI monsterAI = go.GetComponent<MonsterAI>();
+                if (monsterAI != null)
+                    targetField?.SetValue(monsterAI, player);
+            }
+
+            return new { status = "ok", count, level = data.level };
         }
 
         private object BerserkerSquad(RpcActionBerserkerSquadData data)
