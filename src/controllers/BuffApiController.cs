@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -16,8 +18,11 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("weakness-curse", ActionWeaknessCurse);
             RegisterRpcAction<object>("weakness-curse",            WeaknessCurse);
 
-            RegisterHttpAction<PlayerActionData>("invisibility",   ActionInvisibility);
-            RegisterRpcAction<object>("invisibility",              Invisibility);
+            RegisterHttpAction<PlayerActionData>("invisibility",        ActionInvisibility);
+            RegisterRpcAction<object>("invisibility",                 Invisibility);
+
+            RegisterHttpAction<PlayerActionData>("mushroom-happiness", ActionMushroomHappiness);
+            RegisterRpcAction<object>("mushroom-happiness",            MushroomHappiness);
         }
 
         // === Server (HTTP) ===
@@ -100,6 +105,83 @@ namespace ValheimStreamerApi
 
             player.GetSEMan().AddStatusEffect(se);
             return new { status = "ok" };
+        }
+
+        // === Mushroom Happiness ===
+
+        private const string MushroomEnvName = "ValheimStreamerApi_Mushroom";
+
+        private async Task<object> ActionMushroomHappiness(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "mushroom-happiness", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
+        private object MushroomHappiness(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            // Яд
+            var poison = ObjectDB.instance.GetStatusEffect("Poison".GetStableHashCode(true));
+            if (poison != null) player.GetSEMan().AddStatusEffect(poison);
+
+            // Слабость
+            var weak    = ScriptableObject.CreateInstance<WeaknessCurseSE>();
+            weak.name   = "ValheimStreamerApi_WeaknessCurse";
+            weak.m_name = "Проклятие слабости";
+            weak.m_ttl  = 30f;
+            if (poison != null) weak.m_icon = poison.m_icon;
+            player.GetSEMan().AddStatusEffect(weak);
+
+            // Ухудшение зрения + снятие яда по таймеру
+            player.StartCoroutine(MushroomFogRoutine(player));
+
+            return new { status = "ok" };
+        }
+
+        private static void EnsureMushroomEnvironment()
+        {
+            if (EnvMan.instance.m_environments.Any(e => e.m_name == MushroomEnvName))
+                return;
+
+            var fogColor = new Color(0.25f, 0.45f, 0.20f, 1f);
+            var ambColor = new Color(0.15f, 0.30f, 0.10f);
+
+            EnvMan.instance.AppendEnvironment(new EnvSetup
+            {
+                m_name                = MushroomEnvName,
+                m_psystems            = new GameObject[0],
+                m_fogDensityDay       = 0.09f,
+                m_fogDensityNight     = 0.12f,
+                m_fogDensityEvening   = 0.10f,
+                m_fogDensityMorning   = 0.10f,
+                m_fogColorDay         = fogColor,
+                m_fogColorNight       = fogColor,
+                m_fogColorEvening     = fogColor,
+                m_fogColorMorning     = fogColor,
+                m_fogColorSunDay      = fogColor,
+                m_fogColorSunNight    = fogColor,
+                m_fogColorSunEvening  = fogColor,
+                m_fogColorSunMorning  = fogColor,
+                m_lightIntensityDay   = 0.45f,
+                m_lightIntensityNight = 0f,
+                m_ambColorDay         = ambColor,
+                m_ambColorNight       = new Color(0.05f, 0.10f, 0.05f),
+                m_rainCloudAlpha      = 0f,
+            });
+        }
+
+        private static IEnumerator MushroomFogRoutine(Player player)
+        {
+            EnsureMushroomEnvironment();
+            EnvMan.instance.m_debugEnv = MushroomEnvName;
+            yield return new WaitForSeconds(30f);
+            EnvMan.instance.m_debugEnv = "";
+            player.GetSEMan().RemoveStatusEffect("Poison".GetStableHashCode(true));
         }
     }
 
