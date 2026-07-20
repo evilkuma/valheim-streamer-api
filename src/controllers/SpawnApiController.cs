@@ -97,6 +97,7 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("follower",          ActionFollower);
             RegisterHttpAction<PlayerActionData>("dragon-companion",  ActionDragonCompanion);
             RegisterHttpAction<PlayerActionData>("boar-herd",         ActionBoarHerd);
+            RegisterHttpAction<PlayerActionData>("odin-gift",         ActionOdinGift);
             RegisterHttpAction<PlayerActionData>("berserker-squad",   ActionBerserkerSquad);
             RegisterHttpAction<PlayerActionData>("tornado-resources", ActionTornadoResources);
 
@@ -259,11 +260,7 @@ namespace ValheimStreamerApi
                 new[] { "FulingBerserker", "Deathsquito", "Lox"   },
             };
 
-            int tier = 0;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+            int tier = GetProgressionTier();
 
             string[] pool = mobsByTier[tier];
             string prefabName = pool[Random.Range(0, pool.Length)];
@@ -288,11 +285,7 @@ namespace ValheimStreamerApi
                 (prefab: "Skeleton_Poison", level: 3, min: 8, max: 10),
             };
 
-            int tier = 0;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+            int tier = GetProgressionTier();
 
             var t = tiers[tier];
             int amount = Random.Range(t.min, t.max + 1);
@@ -317,11 +310,7 @@ namespace ValheimStreamerApi
                 (prefab: "Draugr_Elite", level: 3),
             };
 
-            int tier = 0;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+            int tier = GetProgressionTier();
 
             var t = tiers[tier];
 
@@ -345,16 +334,45 @@ namespace ValheimStreamerApi
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
             if (targetPeer == null) return new { error = "no player peer" };
 
-            int tier = 0;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))  tier = 1;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))   tier = 2;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass")) tier = 3;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))   tier = 4;
+            int tier = GetProgressionTier();
 
             int[] levels = { 1, 1, 2, 2, 3 };
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "boar-herd",
                 new RpcActionBoarHerdData { level = levels[tier] });
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private static readonly string[][] ArmorTiers =
+        {
+            new[] { "HelmetLeather",       "ArmorLeatherChest",       "ArmorLeatherLegs",      "CapeDeerHide"  }, // 0 — старт
+            new[] { "HelmetTrollLeather",  "ArmorTrollLeatherChest",  "ArmorTrollLeatherLegs", "CapeTrollHide" }, // 1 — Эйктюр
+            new[] { "HelmetBronze",        "ArmorBronzeChest",        "ArmorBronzeLegs",       "CapeDeerHide"  }, // 2 — Древний
+            new[] { "HelmetIron",          "ArmorIronChest",          "ArmorIronLegs",         "CapeWolf"      }, // 3 — Болотник
+            new[] { "HelmetDrake",         "ArmorWolfChest",          "ArmorWolfLegs",         "CapeWolf"      }, // 4 — Модер
+            new[] { "HelmetPadded",        "ArmorPaddedCuirass",      "ArmorPaddedGreaves",    "CapeLinen"     }, // 5 — Яглут
+            new[] { "HelmetCarapace",      "ArmorCarapaceChest",      "ArmorCarapaceLegs",     "CapeFeather"   }, // 6 — Королева
+        };
+
+        private async Task<object> ActionOdinGift(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            int tier = GetProgressionTier(6);
+
+            string[] chests = {
+                "piece_chest_wood", "piece_chest_wood", "piece_chest",
+                "piece_chest", "piece_chest_blackmetal",
+                "piece_chest_blackmetal", "piece_chest_blackmetal",
+            };
+
+            var items = new List<ChestItemData>();
+            foreach (var name in ArmorTiers[tier])
+                items.Add(new ChestItemData { name = name, amount = 1 });
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "chest",
+                new RpcActionChestData { chest = chests[tier], items = items });
             return JsonParser.Parse<RpcResponseData>(zData);
         }
 
@@ -373,12 +391,7 @@ namespace ValheimStreamerApi
                 (prefab: "FulingBerserker",  level: 3),
             };
 
-            int tier = 0;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))   tier = 1;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))     tier = 2;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass"))   tier = 3;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))     tier = 4;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_goblinking")) tier = 5;
+            int tier = GetProgressionTier(5);
 
             var t = tiers[tier];
 
@@ -451,12 +464,7 @@ namespace ValheimStreamerApi
                 },
             };
 
-            int tier = 0;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))   tier = 1;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))     tier = 2;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass"))   tier = 3;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))     tier = 4;
-            if (ZoneSystem.instance.GetGlobalKey("defeated_goblinking")) tier = 5;
+            int tier = GetProgressionTier(5);
 
             int pickCount = Random.Range(6, 9);
             List<ChestItemData> selected = ShuffleAndPick(pools[tier], pickCount);
@@ -465,6 +473,18 @@ namespace ValheimStreamerApi
                 new RpcActionTornadoData { items = selected }
             );
             return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private static int GetProgressionTier(int maxTier = 4)
+        {
+            int tier = 0;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_eikthyr"))                     tier = 1;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_gdking"))                      tier = 2;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_bonemass"))                    tier = 3;
+            if (ZoneSystem.instance.GetGlobalKey("defeated_dragon"))                      tier = 4;
+            if (maxTier >= 5 && ZoneSystem.instance.GetGlobalKey("defeated_goblinking")) tier = 5;
+            if (maxTier >= 6 && ZoneSystem.instance.GetGlobalKey("defeated_queen"))      tier = 6;
+            return tier;
         }
 
         private static List<ChestItemData> ShuffleAndPick(TornadoPoolItem[] pool, int pickCount)
