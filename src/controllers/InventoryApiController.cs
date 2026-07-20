@@ -36,10 +36,12 @@ namespace ValheimStreamerApi
 
             RegisterHttpAction<PlayerActionData>("disarmament",       ActionDisarmament);
             RegisterHttpAction<PlayerActionData>("scatter-inventory", ActionScatterInventory);
+            RegisterHttpAction<PlayerActionData>("loki-theft",        ActionLokiTheft);
 
             RegisterRpcAction<object>("get-inventory",     GetInventory);
             RegisterRpcAction<object>("disarmament",       Disarmament);
             RegisterRpcAction<object>("scatter-inventory", ScatterInventory);
+            RegisterRpcAction<object>("loki-theft",        LokiTheft);
         }
 
         // === Server (HTTP) ===
@@ -68,6 +70,15 @@ namespace ValheimStreamerApi
             if (targetPeer == null) return new { error = "no player peer" };
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "scatter-inventory", new {});
+            return JsonParser.Parse<RpcStatusData>(zData);
+        }
+
+        private async Task<object> ActionLokiTheft(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "loki-theft", new {});
             return JsonParser.Parse<RpcStatusData>(zData);
         }
 
@@ -156,6 +167,24 @@ namespace ValheimStreamerApi
             }
 
             return new { status = "ok" };
+        }
+
+        private object LokiTheft(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            var inventory = player.GetInventory();
+            var items = inventory.GetAllItems();
+            if (items.Count == 0) return new { status = "inventory empty" };
+
+            var item = items[Random.Range(0, items.Count)];
+            string stolenName = item.m_shared.m_name;
+            if (item.m_equipped)
+                player.UnequipItem(item);
+            inventory.RemoveItem(item);
+
+            return new { status = "ok", stolen = stolenName };
         }
 
         private object ScatterInventory(object _data)
