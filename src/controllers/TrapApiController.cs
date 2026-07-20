@@ -30,6 +30,9 @@ namespace ValheimStreamerApi
 
             RegisterHttpAction<PlayerActionData>("noise-curse",       ActionNoiseCurse);
             RegisterRpcAction<object>("noise-curse",                 NoiseCurse);
+
+            RegisterHttpAction<PlayerActionData>("runic-bomb", ActionRunicBomb);
+            RegisterRpcAction<object>("runic-bomb",            RunicBomb);
         }
 
         // === Server (HTTP) ===
@@ -71,7 +74,47 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<object>(zData);
         }
 
+        private async Task<object> ActionRunicBomb(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "runic-bomb", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
         // === Client (RPC) ===
+
+        private object RunicBomb(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            const int   count  = 30;
+            const float radius = 100f;
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 rnd      = Random.insideUnitCircle * radius;
+                Vector3 castFrom = player.transform.position + new Vector3(rnd.x, 50f, rnd.y);
+                Vector3 pos      = Physics.Raycast(castFrom, Vector3.down, out RaycastHit hit, 200f)
+                    ? hit.point + Vector3.up * 0.05f
+                    : new Vector3(castFrom.x, player.transform.position.y, castFrom.z);
+
+                var mine = new GameObject("RunicMine");
+                mine.transform.position = pos;
+
+                var light = mine.AddComponent<Light>();
+                light.type      = LightType.Point;
+                light.color     = new Color(0.3f, 0.6f, 1f);
+                light.intensity = 1.5f;
+                light.range     = 6f;
+
+                mine.AddComponent<RunicMineBehaviour>();
+            }
+
+            return new { status = "ok", count };
+        }
 
         private object NoiseCurse(object _data)
         {
