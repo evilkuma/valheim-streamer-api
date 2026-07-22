@@ -100,6 +100,7 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("odin-gift",         ActionOdinGift);
             RegisterHttpAction<PlayerActionData>("berserker-squad",   ActionBerserkerSquad);
             RegisterHttpAction<PlayerActionData>("tornado-resources", ActionTornadoResources);
+            RegisterHttpAction<PlayerActionData>("mead-rain",         ActionMeadRain);
 
             RegisterRpcAction<RpcActionData>("main",                     Spawn);
             RegisterRpcAction<object>("wooden-prison",                   WoodenPrison);
@@ -113,6 +114,7 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcActionBoarHerdData>("boar-herd",      BoarHerd);
             RegisterRpcAction<RpcActionBerserkerSquadData>("berserker-squad", BerserkerSquad);
             RegisterRpcAction<RpcActionTornadoData>("tornado-resources",       TornadoResources);
+            RegisterRpcAction<object>("mead-rain",                             MeadRain);
         }
 
         // === Server (HTTP) ===
@@ -401,6 +403,15 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(squadData);
         }
 
+        private async Task<object> ActionMeadRain(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "mead-rain", new {});
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
         private async Task<object> ActionTornadoResources(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
@@ -473,6 +484,88 @@ namespace ValheimStreamerApi
                 new RpcActionTornadoData { items = selected }
             );
             return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private object MeadRain(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+            player.StartCoroutine(MeadRainRoutine(player));
+            return new { status = "ok" };
+        }
+
+        private static IEnumerator MeadRainRoutine(Player player)
+        {
+            const int   count    = 20;
+            const float interval = 0.25f;
+            const float spread   = 3f;
+            const float height   = 20f;
+
+            GameObject meadPrefab = ZNetScene.instance.GetPrefab("MeadStaminaMedium");
+            if (!meadPrefab) yield break;
+
+            float staminaChunk = player.GetMaxStamina() / count;
+
+            player.StartCoroutine(MeadAuraRoutine(player, count * interval + 1f));
+
+            for (int i = 0; i < count; i++)
+            {
+                if (player == null) yield break;
+
+                Vector2 rnd       = Random.insideUnitCircle * spread;
+                Vector3 groundPos = player.transform.position + new Vector3(rnd.x, 0f, rnd.y);
+                Vector3 spawnPos  = groundPos + Vector3.up * height;
+
+                GameObject go = Object.Instantiate(meadPrefab, spawnPos, Quaternion.identity);
+
+                var trail = go.AddComponent<TrailRenderer>();
+                trail.time       = 1.5f;
+                trail.startWidth = 0.08f;
+                trail.endWidth   = 0f;
+                trail.startColor = new Color(1f, 0.75f, 0.1f, 1f);
+                trail.endColor   = new Color(1f, 0.5f,  0f,   0f);
+                var partRenderer = ZNetScene.instance.GetPrefab("vfx_Potion_stamina_medium")
+                    ?.GetComponentInChildren<Renderer>(true);
+                if (partRenderer != null) trail.material = partRenderer.sharedMaterial;
+
+                player.StartCoroutine(MeadLandingRoutine(go, groundPos, staminaChunk));
+
+                yield return new WaitForSeconds(interval);
+            }
+        }
+
+        private static IEnumerator MeadAuraRoutine(Player player, float duration)
+        {
+            GameObject vfxPrefab = ZNetScene.instance.GetPrefab("vfx_Potion_stamina_medium");
+            float elapsed = 0f;
+            while (elapsed < duration && player != null)
+            {
+                if (vfxPrefab != null)
+                    Object.Instantiate(vfxPrefab, player.transform.position + Vector3.up, Quaternion.identity);
+                yield return new WaitForSeconds(0.4f);
+                elapsed += 0.4f;
+            }
+        }
+
+        private static IEnumerator MeadLandingRoutine(GameObject mead, Vector3 groundPos, float staminaChunk)
+        {
+            float targetY  = groundPos.y + 0.5f;
+            float timeout  = 6f;
+            float elapsed  = 0f;
+
+            while (mead != null && elapsed < timeout)
+            {
+                if (mead.transform.position.y <= targetY) break;
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            GameObject fx = ZNetScene.instance?.GetPrefab("vfx_Potion_stamina_medium");
+            if (fx != null) Object.Instantiate(fx, groundPos, Quaternion.identity);
+
+            Player player = Player.m_localPlayer;
+            if (player != null)
+                player.AddStamina(staminaChunk);
         }
 
         private static int GetProgressionTier(int maxTier = 4)
