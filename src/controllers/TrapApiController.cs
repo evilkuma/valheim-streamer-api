@@ -31,8 +31,11 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("noise-curse",       ActionNoiseCurse);
             RegisterRpcAction<object>("noise-curse",                 NoiseCurse);
 
-            RegisterHttpAction<PlayerActionData>("runic-bomb", ActionRunicBomb);
-            RegisterRpcAction<object>("runic-bomb",            RunicBomb);
+            RegisterHttpAction<PlayerActionData>("runic-bomb",    ActionRunicBomb);
+            RegisterRpcAction<object>("runic-bomb",              RunicBomb);
+
+            RegisterHttpAction<PlayerActionData>("fire-geysers", ActionFireGeysers);
+            RegisterRpcAction<object>("fire-geysers",            FireGeysers);
         }
 
         // === Server (HTTP) ===
@@ -72,6 +75,46 @@ namespace ValheimStreamerApi
 
             var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "noise-curse", new {});
             return JsonParser.Parse<object>(zData);
+        }
+
+        private async Task<object> ActionFireGeysers(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "fire-geysers", new {});
+            return JsonParser.Parse<object>(zData);
+        }
+
+        private object FireGeysers(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            const int   count  = 25;
+            const float radius = 40f;
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 rnd      = Random.insideUnitCircle * radius;
+                Vector3 castFrom = player.transform.position + new Vector3(rnd.x, 50f, rnd.y);
+                Vector3 pos      = Physics.Raycast(castFrom, Vector3.down, out RaycastHit hit, 200f)
+                    ? hit.point + Vector3.up * 0.1f
+                    : new Vector3(castFrom.x, player.transform.position.y, castFrom.z);
+
+                var geyser = new GameObject("FireGeyser");
+                geyser.transform.position = pos;
+
+                var light = geyser.AddComponent<Light>();
+                light.type      = LightType.Point;
+                light.color     = new Color(1f, 0.35f, 0.05f);
+                light.intensity = 2f;
+                light.range     = 4f;
+
+                geyser.AddComponent<GeyserBehaviour>();
+            }
+
+            return new { status = "ok", count };
         }
 
         private async Task<object> ActionRunicBomb(PlayerActionData data)
