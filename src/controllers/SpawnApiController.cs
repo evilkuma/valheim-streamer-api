@@ -101,6 +101,7 @@ namespace ValheimStreamerApi
             RegisterHttpAction<PlayerActionData>("berserker-squad",   ActionBerserkerSquad);
             RegisterHttpAction<PlayerActionData>("tornado-resources", ActionTornadoResources);
             RegisterHttpAction<PlayerActionData>("mead-rain",         ActionMeadRain);
+            RegisterHttpAction<PlayerActionData>("moder-visit",       ActionModerVisit);
 
             RegisterRpcAction<RpcActionData>("main",                     Spawn);
             RegisterRpcAction<object>("wooden-prison",                   WoodenPrison);
@@ -115,6 +116,7 @@ namespace ValheimStreamerApi
             RegisterRpcAction<RpcActionBerserkerSquadData>("berserker-squad", BerserkerSquad);
             RegisterRpcAction<RpcActionTornadoData>("tornado-resources",       TornadoResources);
             RegisterRpcAction<object>("mead-rain",                             MeadRain);
+            RegisterRpcAction<object>("moder-visit",                           ModerVisit);
         }
 
         // === Server (HTTP) ===
@@ -403,6 +405,15 @@ namespace ValheimStreamerApi
             return JsonParser.Parse<RpcResponseData>(squadData);
         }
 
+        private async Task<object> ActionModerVisit(PlayerActionData data)
+        {
+            var targetPeer = RpcManager.FindPlayerByName(data.playerName);
+            if (targetPeer == null) return new { error = "no player peer" };
+
+            var zData = await RpcManager.SendMessageAsync(rpc, targetPeer.m_uid, "moder-visit", new {});
+            return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
         private async Task<object> ActionMeadRain(PlayerActionData data)
         {
             var targetPeer = RpcManager.FindPlayerByName(data.playerName);
@@ -484,6 +495,22 @@ namespace ValheimStreamerApi
                 new RpcActionTornadoData { items = selected }
             );
             return JsonParser.Parse<RpcResponseData>(zData);
+        }
+
+        private object ModerVisit(object _data)
+        {
+            Player player = Player.m_localPlayer;
+            if (player == null) return new { status = "not a player" };
+
+            GameObject prefab = ZNetScene.instance.GetPrefab("StreamerApi.ModerVisit");
+            if (!prefab) return new { status = "Prefab not found: StreamerApi.ModerVisit" };
+
+            // Spawn close overhead so AI engages immediately with natural animations
+            Vector3 pos = player.transform.position + new Vector3(10f, 20f, 15f);
+            GameObject go = GameObject.Instantiate(prefab, pos, Quaternion.identity);
+            go.GetComponent<ModerVisitBehaviour>()?.Init(player);
+
+            return new { status = "ok" };
         }
 
         private object MeadRain(object _data)

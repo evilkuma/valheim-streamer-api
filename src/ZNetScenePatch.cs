@@ -29,6 +29,7 @@ namespace ValheimStreamerApi.Patches
         {
             PatchFollower(__instance);
             PatchDragonCompanion(__instance);
+            PatchModerVisit(__instance);
         }
 
         private static void PatchFollower(ZNetScene __instance)
@@ -133,6 +134,40 @@ namespace ValheimStreamerApi.Patches
             __instance.m_prefabs.Add(clone);
 
             Log.LogInfo($"[ValheimStreamerApi] DragonCompanion зарегистрирован на основе Hatchling.");
+        }
+
+        private static void PatchModerVisit(ZNetScene __instance)
+        {
+            var sourcePrefab = __instance.GetPrefab("Dragon");
+            if (sourcePrefab == null)
+            {
+                Log.LogError("[ValheimStreamerApi] Dragon не найден — ModerVisit не зарегистрирован.");
+                return;
+            }
+
+            var clone = UnityEngine.Object.Instantiate(sourcePrefab, PrefabParent.transform);
+            clone.name = "StreamerApi.ModerVisit";
+
+            var drop = clone.GetComponent<CharacterDrop>();
+            if (drop != null) drop.m_drops.Clear();
+
+            clone.AddComponent<ModerVisitBehaviour>();
+
+            var namedPrefabs = AccessTools.Field(typeof(ZNetScene), "m_namedPrefabs")
+                ?.GetValue(__instance) as Dictionary<int, GameObject>;
+            if (namedPrefabs == null)
+            {
+                Log.LogError("[ValheimStreamerApi] m_namedPrefabs не найден — ModerVisit не зарегистрирован.");
+                return;
+            }
+
+            var zview = clone.GetComponent<ZNetView>();
+            if (zview != null) AccessTools.Field(typeof(ZNetView), "m_persistent")?.SetValue(zview, true);
+
+            namedPrefabs[clone.name.GetStableHashCode(true)] = clone;
+            __instance.m_prefabs.Add(clone);
+
+            Log.LogInfo("[ValheimStreamerApi] ModerVisit зарегистрирован на основе Dragon.");
         }
 
         private static int CopyFields(Component source, Component destination)
